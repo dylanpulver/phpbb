@@ -80,17 +80,22 @@ class run extends \phpbb\console\command\command
 	{
 		if ($this->lock_db->acquire())
 		{
-			$task_name = $input->getArgument('name');
-			if ($task_name)
+			try
 			{
-				$exit_status = $this->run_one($input, $output, $task_name);
+				$task_name = $input->getArgument('name');
+				if ($task_name)
+				{
+					$exit_status = $this->run_one($input, $output, $task_name);
+				}
+				else
+				{
+					$exit_status = $this->run_all($input, $output);
+				}
 			}
-			else
+			finally
 			{
-				$exit_status = $this->run_all($input, $output);
+				$this->lock_db->release();
 			}
-
-			$this->lock_db->release();
 
 			return !$exit_status ? symfony_command::SUCCESS : symfony_command::FAILURE;
 		}

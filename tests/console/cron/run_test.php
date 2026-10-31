@@ -105,16 +105,20 @@ class phpbb_console_command_cron_run_test extends phpbb_database_test_case
 
 	public function test_error_lock()
 	{
-		$this->expectException(\phpbb\exception\runtime_exception::class);
-		$this->expectExceptionMessage('CRON_LOCK_ERROR');
-
 		$this->lock->acquire();
 		$command_tester = $this->get_command_tester();
-		$exit_status = $command_tester->execute([]);
 
-		$this->assertStringContainsString('CRON_LOCK_ERROR', $command_tester->getDisplay());
+		try
+		{
+			$command_tester->execute([]);
+			$this->fail('Running cron while the lock is held should raise a runtime_exception.');
+		}
+		catch (\phpbb\exception\runtime_exception $e)
+		{
+			$this->assertStringContainsString('CRON_LOCK_ERROR', $e->getMessage());
+		}
+
 		$this->assertSame(false, $this->task->executed);
-		$this->assertSame(1, $exit_status);
 	}
 
 	public function test_no_task()
@@ -222,15 +226,19 @@ class phpbb_console_command_cron_run_test extends phpbb_database_test_case
 
 	public function test_arg_invalid()
 	{
-		$this->expectException(\phpbb\exception\runtime_exception::class);
-		$this->expectExceptionMessage('CRON_NO_SUCH_TASK');
-
 		$command_tester = $this->get_command_tester();
-		$exit_status = $command_tester->execute(array('name' => 'foo'));
 
-		$this->assertStringContainsString('CRON_NO_SUCH_TASK', $command_tester->getDisplay());
+		try
+		{
+			$command_tester->execute(array('name' => 'foo'));
+			$this->fail('An unknown task name should raise a runtime_exception.');
+		}
+		catch (\phpbb\exception\runtime_exception $e)
+		{
+			$this->assertStringContainsString('CRON_NO_SUCH_TASK', $e->getMessage());
+		}
+
 		$this->assertSame(false, $this->task->executed);
-		$this->assertSame(2, $exit_status);
 		$this->assertSame(false, $this->lock->owns_lock());
 	}
 
